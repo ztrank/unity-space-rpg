@@ -4,19 +4,30 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using Zenject;
 
-public class FileService
+public interface IFileService
 {
-    public static FileService Instance { get; } = new FileService();
+    bool Exists(string path);
+    string ReadAllText(string path);
+    byte[] ReadAllBytes(string path);
+    void WriteAllText(string path, string data);
+    void WriteAllBytes(string path, byte[] data);
+}
 
-    public bool FileExists(string path)
+public class FileService : IFileService
+{
+    private readonly IDirectoryService directoryService;
+
+    [Inject]
+    public FileService(IDirectoryService directoryService)
     {
-        return File.Exists(path);
+        this.directoryService = directoryService;
     }
 
-    public bool DirectoryExists(string path)
+    public bool Exists(string path)
     {
-        return Directory.Exists(path);
+        return File.Exists(path);
     }
 
     public string ReadAllText(string path)
@@ -29,30 +40,15 @@ public class FileService
         return File.ReadAllBytes(path);
     }
 
-    internal bool FileExists(object pat)
-    {
-        throw new NotImplementedException();
-    }
-
     public void WriteAllText(string path, string data)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        this.directoryService.CreateDirectory(Path.GetDirectoryName(path));
         File.WriteAllText(path, data);
     }
 
     public void WriteAllBytes(string path, byte[] data)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        this.directoryService.CreateDirectory(Path.GetDirectoryName(path));
         File.WriteAllBytes(path, data);
-    }
-
-    public string FromBytes(byte[] bytes)
-    {
-        return Encoding.UTF8.GetString(bytes);
-    }
-
-    public byte[] ToBytes(string data)
-    {
-        return Encoding.UTF8.GetBytes(data);
     }
 }

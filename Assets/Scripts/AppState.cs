@@ -4,44 +4,37 @@ using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using UnityEngine;
+using Zenject;
 
 public class AppState : MonoBehaviour
 {
-    public static AppState Instance { get; private set; }
+    private IAuthenticationService authService;
+    private IUserProfileManager userProfileManager;
 
-    public static AppAuthentication Auth => AppAuthentication.Instance;
-
-    public static UserProfileManager UserProfileManager => UserProfileManager.Instance;
-
-    private void Awake()
+    [Inject]
+    public void Inject(IAuthenticationService authService, IUserProfileManager userProfileManager)
     {
-        if (Instance != null)
-        {
-            Destroy(this.gameObject);
-            return;
-        }
-
-        Instance = this;
-        DontDestroyOnLoad(this.gameObject);
+        this.authService = authService;
+        this.userProfileManager = userProfileManager;
     }
 
     async void Start()
     {
         await UnityServices.InitializeAsync();
-
+        this.authService.Init();
         Debug.Log("Unity Services Initialized");
 
-        Auth.AuthStateChange += (object sender, string profileId) =>
+        this.authService.AuthStateChange += (object sender, string profileId) =>
         {
             Debug.Log("Auth State Change: " + profileId);
             if (!string.IsNullOrWhiteSpace(profileId))
             {
-                UserProfile profile = UserProfileManager.Instance.GetUserProfile(profileId);
-                UserProfileManager.Instance.SetCurrentUser(profile);
+                UserProfile profile = this.userProfileManager.GetUserProfile(profileId);
+                this.userProfileManager.SetCurrentUser(profile);
             }
         };
 
 
-        await Auth.SignOn();
+        await this.authService.SignInAnonymouslyAsync();
     }
 }

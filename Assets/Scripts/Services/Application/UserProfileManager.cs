@@ -3,25 +3,32 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using Zenject;
 
-public class UserProfileManager
+public interface IUserProfileManager
 {
-    private static UserProfileManager instance;
+    event EventHandler<UserProfile> CurrentUserChange;
+    UserProfile Current { get; }
+    UserProfile GetUserProfile(string userId);
+    void SaveUserProfile(UserProfile profile);
+    void SetCurrentUser(UserProfile profile);
 
+}
+public class UserProfileManager : IUserProfileManager
+{
     private readonly Dictionary<string, UserProfile> cache = new Dictionary<string, UserProfile>();
 
-    public static UserProfileManager Instance
-    {
-        get
-        {
-            if (instance == null)
-            {
-                instance = new UserProfileManager();
-            }
+    private readonly IFileService fileService;
+    private readonly IEncodingService encodingService;
 
-            return instance;
-        }
+    [Inject]
+    public UserProfileManager(IFileService fileService, IEncodingService encodingService)
+    {
+        this.fileService = fileService;
+        this.encodingService = encodingService;
     }
+
+
 
     public event EventHandler<UserProfile> CurrentUserChange;
     public UserProfile Current { get; private set; }
@@ -33,9 +40,9 @@ public class UserProfileManager
             return this.cache[userId];
         }
 
-        if (FileService.Instance.FileExists(Path.Combine(Application.persistentDataPath, "profiles", userId)))
+        if (this.fileService.Exists(Path.Combine(Application.persistentDataPath, "profiles", userId)))
         {
-            string strData = FileService.Instance.FromBytes(FileService.Instance.ReadAllBytes(Path.Combine(Application.persistentDataPath, "profiles", userId)));
+            string strData = this.encodingService.FromBytes(this.fileService.ReadAllBytes(Path.Combine(Application.persistentDataPath, "profiles", userId)));
             UserProfile.UserProfileData data = JsonUtility.FromJson<UserProfile.UserProfileData>(strData);
 
             this.cache.Add(userId, new UserProfile(data));
@@ -50,7 +57,7 @@ public class UserProfileManager
 
     public void SaveUserProfile(UserProfile profile)
     {
-        FileService.Instance.WriteAllBytes(Path.Combine(Application.persistentDataPath, "profiles", profile.UserId), FileService.Instance.ToBytes(JsonUtility.ToJson(profile.ToData())));
+        this.fileService.WriteAllBytes(Path.Combine(Application.persistentDataPath, "profiles", profile.UserId), this.encodingService.ToBytes(JsonUtility.ToJson(profile.ToData())));
     }
 
     public void SetCurrentUser(UserProfile profile)

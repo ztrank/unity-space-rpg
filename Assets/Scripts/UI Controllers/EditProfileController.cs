@@ -5,24 +5,31 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Zenject;
 
 public class EditProfileController : MonoBehaviour
 {
     public TMP_InputField nameField;
     public TMP_InputField bioField;
     private UserProfile userProfile;
+    private IUserProfileManager userProfileManager;
 
+    [Inject]
+    public void Inject(IUserProfileManager userProfileManager)
+    {
+        this.userProfileManager = userProfileManager;
+    }
 
     // Start is called before the first frame update
     void Start()
     {
-        if (AppState.UserProfileManager.Current == null)
+        if (this.userProfileManager.Current == null)
         {
-            AppState.UserProfileManager.CurrentUserChange += this.SetUser;
+            this.userProfileManager.CurrentUserChange += this.SetUser;
         }
         else
         {
-            this.SetUser(this, AppState.UserProfileManager.Current);
+            this.SetUser(this, this.userProfileManager.Current);
         }
     }
 
@@ -64,7 +71,7 @@ public class EditProfileController : MonoBehaviour
             Debug.Log("Saving Profile");
             this.userProfile.Name = this.nameField.text;
             this.userProfile.Bio = this.bioField.text;
-            AppState.UserProfileManager.SaveUserProfile(this.userProfile);
+            this.userProfileManager.SaveUserProfile(this.userProfile);
             yield return null;
 
             callback.Invoke();
@@ -80,7 +87,7 @@ public class EditProfileController : MonoBehaviour
     {
         try
         {
-            AppState.UserProfileManager.CurrentUserChange -= this.SetUser;
+            this.userProfileManager.CurrentUserChange -= this.SetUser;
         }
         catch (Exception)
         {
